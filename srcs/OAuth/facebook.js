@@ -1,35 +1,41 @@
 const crypto = require("crypto");
 const fetch = require("node-fetch");
 
-const CLIENT_ID = "299120311500090";
-const CLIENT_SECRET = "c4d782a6fc624a28ea50544ec5feed30";
-const SCOPES = ["email"];
-const REDIRECT_URI = "http://localhost:8080/redirect";
-
 class facebook {
-    constructor() {
+    constructor(client_id, client_secret, redirect_uri, scopes) {
+        this.client_id = client_id;
+        this.client_secret = client_secret;
+        this.redirect_uri = redirect_uri;
+        this.scopes = scopes;
+
         this.states = [];
-        this.adminToken = {};
-        this.setAdminToken();
+        // this.adminToken = {};
+        // this.setAdminToken();
     }
+
+    // setAdmingToken generates an admin token for some operations
+    // For now, I don't need it
     setAdminToken() {
-        fetch(`https://graph.facebook.com/oauth/access_token?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&grant_type=client_credentials`)
+        fetch(`https://graph.facebook.com/oauth/access_token?client_id=${this.client_id}&client_secret=${this.client_secret}&grant_type=client_credentials`)
             .then(res => res.json())
             .then(data => this.adminToken = { type: data.token_type, token: data.access_token });
     }
+
+    // getRedirectUrl returns a url for the user to be redirect for facebook login
     getRedirectUrl() {
         const state = crypto.randomBytes(16).toString("hex");
         this.states.push(state);
-        return (`https://www.facebook.com/v9.0/dialog/oauth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&state=${state}&scope=${SCOPES.join(",")}`);
+        return (`https://www.facebook.com/v9.0/dialog/oauth?client_id=${this.client_id}&redirect_uri=${this.redirect_uri}&state=${state}&scope=${this.scopes.join(",")}`);
     }
 
+    // getOauthToken exchanges the code for an OAuth token and returns it
     getOauthToken(code, state) {
         return new Promise((resolve) => {
             const statePosition = this.states.findIndex(State => State === state);
             //If the state we sent is equal to the current state
             if (statePosition > -1 && code.length) {
                 this.states.splice(statePosition, 1);
-                fetch(`https://graph.facebook.com/v9.0/oauth/access_token?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&client_secret=${CLIENT_SECRET}&code=${code}`)
+                fetch(`https://graph.facebook.com/v9.0/oauth/access_token?client_id=${this.client_id}&redirect_uri=${this.redirect_uri}&client_secret=${this.client_secret}&code=${code}`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.error)
@@ -43,22 +49,9 @@ class facebook {
         });
     }
 
-    getUserId(token) {
-        return new Promise((resolve) => {
-            if (token.token && token.type && this.adminToken.token) {
-                fetch(`https://graph.facebook.com/debug_token?input_token=${token.token}&access_token=${this.adminToken.token}`)
-                    .then(res => res.json())
-                    .then(data => resolve(data.data));
-            }
-            else
-                resolve(false);
-        })
-    }
-
+    // getUserInfo gets the asked fields from the user
     async getUserInfo(token, fields) {
-        const Id = (await this.getUserId(token)).user_id;
-        console.log("ID:", Id);
-        const response = await fetch(`https://graph.facebook.com/v9.0/${Id}?fields=${fields.join(",")}&access_token=${token.token}`);
+        const response = await fetch(`https://graph.facebook.com/v9.0/me?fields=${fields.join(",")}&access_token=${token.token}`);
         const data = await response.json();
         return data;
     }
