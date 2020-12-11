@@ -50,8 +50,8 @@ class facebook {
     }
 
     // getUserInfo gets the asked fields from the user
-    async getUserInfo(token, fields) {
-        const response = await fetch(`https://graph.facebook.com/v9.0/me?fields=${fields.join(",")}&access_token=${token.token}`);
+    async getUserInfo(UserToken, fields) {
+        const response = await fetch(`https://graph.facebook.com/v9.0/me?fields=${fields.join(",")}&access_token=${UserToken.token}`);
         const data = await response.json();
         return data;
     }
