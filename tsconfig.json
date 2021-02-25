@@ -5,7 +5,9 @@
         "moduleResolution": "node",
         "module": "CommonJS",
         "removeComments": true,
-        "outDir": "lib"
+        "outDir": "lib",
+        "declaration": true,
+        "declarationDir": "dist"
     },
     "exclude": [
         "node_modules",

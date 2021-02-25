@@ -1,1 +1,0 @@
-export { FacebookOAuth } from "./srcs/OAuth/facebook";

@@ -1,56 +1,48 @@
-const crypto = require("crypto");
-const fetch = require("node-fetch");
-// import crypto from "crypto";
-// import fetch from "node-fetch";
+import fetch from "node-fetch";
+import * as crypto from "crypto";
+import {OAuthToken} from "./OAuth";
 
-interface OAuthToken {
-    type: String,
-    token: String
-}
-
-class facebook {
-    clientId: String;
-    clientSecret: String;
-    redirectUri: String;
-    scopes: Array<String>;
-    states: Array<String>;
+export class FacebookOAuth {
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    scopes: Array<string>;
+    states: Array<string>;
 
     adminToken: OAuthToken;
 
-    constructor(clientId: String, clientSecret: String, redirectUri: String, scopes: Array<String>) {
+    constructor(clientId: string, clientSecret: string, redirectUri: string, scopes: Array<string>) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
         this.scopes = scopes;
-
         this.states = [];
-        // this.adminToken = {};
-        // this.setAdminToken();
     }
 
     // setAdmingToken generates an admin token for some operations
     // For now, I don't need it
     setAdminToken(): void {
-        fetch(`https://graph.facebook.com/oauth/access_token?clientId=${this.clientId}&clientSecret=${this.clientSecret}&grant_type=client_credentials`)
-            .then(res => res.json())
-            .then(data => this.adminToken = { type: data.token_type, token: data.access_token });
+        fetch(`https://graph.facebook.com/oauth/access_token?client_id=${this.clientId}&client_secret=${this.clientSecret}&grant_type=client_credentials`)
+            .then((res: {json: () => Response}) => res.json())
+            .then((data: any) => this.adminToken = { type: data.token_type, token: data.access_token })
+            .catch(e => console.error(e));
     }
 
     // getRedirectUrl returns a url for the user to be redirect for facebook login
-    getRedirectUrl(): String {
+    getRedirectUrl(): string {
         const state = crypto.randomBytes(16).toString("hex");
         this.states.push(state);
-        return (`https://www.facebook.com/v9.0/dialog/oauth?clientId=${this.clientId}&redirectUri=${this.redirectUri}&state=${state}&scope=${this.scopes.join(",")}`);
+        return (`https://www.facebook.com/v9.0/dialog/oauth?client_id=${this.clientId}&redirect_uri=${this.redirectUri}&state=${state}&scope=${this.scopes.join(",")}`);
     }
 
     // getOauthToken exchanges the code for an OAuth token and returns it
-    getOauthToken(code: String, state: String): Promise<OAuthToken> {
+    getOauthToken(code: string, state: string): Promise<OAuthToken> {
         return new Promise((resolve) => {
             const statePosition = this.states.findIndex(State => State === state);
             //If the state we sent is equal to the current state
             if (statePosition > -1 && code.length) {
                 this.states.splice(statePosition, 1);
-                fetch(`https://graph.facebook.com/v9.0/oauth/access_token?clientId=${this.clientId}&redirectUri=${this.redirectUri}&clientSecret=${this.clientSecret}&code=${code}`)
+                fetch(`https://graph.facebook.com/v9.0/oauth/access_token?client_id=${this.clientId}&redirect_uri=${this.redirectUri}&client_secret=${this.clientSecret}&code=${code}`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.error)
@@ -58,9 +50,10 @@ class facebook {
                         else
                             resolve({ type: data.token_type, token: data.access_token });
                     })
+                    .catch((e: Error) => console.error(e));
             }
             else
-                resolve(false);
+                resolve(null);
         });
     }
 
@@ -71,6 +64,3 @@ class facebook {
         return data;
     }
 }
-
-
-export default facebook;

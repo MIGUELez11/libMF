@@ -1,18 +1,19 @@
-const Facebook = require("./srcs/OAuth/facebook");
+const { FacebookOAuth, GoogleOAuth } = require("./dist/main");
 const express = require("express");
 require("dotenv").config();
-
 const server = express();
-const facebook = new Facebook(process.env.FACEBOOK_CLIENT_ID, process.env.FACEBOOK_CLIENT_SECRET, "http://localhost:8080/redirect", ["email"]);
+const google = new GoogleOAuth(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, "http://localhost:8080/redirect", ["https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/userinfo.email"]);
+
 
 server.get("/login", (req, res) => {
-    res.redirect(facebook.getRedirectUrl());
+    res.redirect(google.getRedirectUrl());
 });
 
 server.get("/redirect", async (req, res) => {
-    console.log(req.query);
-    const Token = await (facebook.getOauthToken(req.query.code, req.query.state));
-    res.send(await facebook.getUserInfo(Token, ["name", "email", "hometown"]));
+    const { code, state } = req.query;
+    const Token = await (google.getOauthToken(code, state));
+    res.send(Token);
 });
 
 server.listen(8080, () => console.log(`listening on http://localhost:${8080}`));
